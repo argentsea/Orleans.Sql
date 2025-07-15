@@ -37,7 +37,7 @@ BEGIN;
 	CREATE TABLE dbo.OrleansReminder
 	(
 		ReminderId int NOT NULL IDENTITY(-2147483231, 1),
-		GrainId uniqueidentifier NOT NULL,
+		GrainId varbinary(68) NOT NULL,
 		Origin nchar(1) NOT NULL,
 		ReminderName nvarchar(150) NOT NULL,
 		StartTime datetime2(3) NOT NULL,
@@ -109,7 +109,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRowKeyV1 (
-	@GrainId nvarchar(150),
+	@GrainId varbinary(68),
 	@ReminderName nvarchar(150)
 ) AS
 BEGIN
@@ -129,7 +129,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRowsKeyV1 (
-	@GrainId nvarchar(150)
+	@GrainId varbinary(68)
 ) AS
 BEGIN
 SELECT OrleansReminder.GrainId,
@@ -147,7 +147,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE wtr.OrleansReminderDeleteRowKeyV1 (
-	@GrainId uniqueidentifier,
+	@GrainId varbinary(68),
 	@ReminderName nvarchar(150),
     @Version int,
 	@IsFound bit OUTPUT
@@ -163,7 +163,7 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE wtr.OrleansReminderUpsertRowKeyV1 (
-	@GrainId uniqueidentifier,
+	@GrainId varbinary(68),
     @Origin nchar(1),
     @GrainType varbinary(128),
 	@ReminderName nvarchar(150),

@@ -1,5 +1,10 @@
 # ArgentSea Orleans SQL Implementation
 
+As a persistance provider for Microsoft Orleans, ArgentSea can save grain data into 3rd-normal-form tables. 
+
+This means that grain state can be queried *across* grains by the SQL engine. For example, if you have a grains that correspond to users, you now have the ability to query user data: which users have specific attributes, how many users meet a criteria, etc.
+
+## Setup
 
 Example appsettings.json sections in the Silos project:
 
@@ -43,8 +48,8 @@ Example appsettings.json sections in the Silos project:
 ```
 
 
+An example startup file section:
 
-An example startup:
 ```C#
 builder.UseOrleans((context, siloBuilder) =>
 {
@@ -88,3 +93,11 @@ You will also need to add to appsettings.json — or other configuration — informa
         "ProcedureName": "rdr.OrleansClusterGatewayListV1"
     }
 ```
+
+## Contributions
+
+Contributions are very welcome.
+
+## License
+
+[MIT.](https://opensource.org/licenses/MIT)
