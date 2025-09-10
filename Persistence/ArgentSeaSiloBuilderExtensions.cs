@@ -1,7 +1,11 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using ArgentSea.Orleans;
+﻿using ArgentSea.Orleans;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
+using Orleans.Configuration;
+using Orleans.Runtime.Hosting;
+using ArgentSea.Orleans.Sql;
 
-namespace ArgentSea.Orleans.Sql;
+namespace Orleans.Hosting;
 
 public static class ArgentSeaSiloBuilderExtensions
 {
@@ -14,15 +18,16 @@ public static class ArgentSeaSiloBuilderExtensions
         this ISiloBuilder builder,
         string providerName,
         Action<OrleansDbPersistenceOptions> options) => builder.ConfigureServices(
-            services => services.AddArgentSeaDbOrleansGrainStorage(providerName, options));
+            services => services.AddArgentSeaDbOrleansGrainStorage(providerName, ob => ob.Configure(options) ));
 
     public static IServiceCollection AddArgentSeaDbOrleansGrainStorage(
         this IServiceCollection services,
         string providerName,
-        Action<OrleansDbPersistenceOptions> options)
+        Action<OptionsBuilder<OrleansDbPersistenceOptions>> options)
     {
-        services.AddOptions<OrleansDbPersistenceOptions>(providerName).Configure(options);
-        services.AddKeyedSingleton(providerName, ArgentSeaGrainStorageFactory.CreateDb);
+        options?.Invoke(services.AddOptions<OrleansDbPersistenceOptions>(providerName));
+        services.ConfigureNamedOptionForLogging<OrleansDbPersistenceOptions>(providerName);
+        services.AddGrainStorage(providerName, ArgentSeaGrainStorageFactory.CreateDb);
         return services;
     }
 
@@ -30,7 +35,7 @@ public static class ArgentSeaSiloBuilderExtensions
         this ISiloBuilder builder,
         string providerName,
         Action<OrleansShardPersistenceOptions> options) => builder.ConfigureServices(
-            services => services.AddArgentSeaShardOrleansGrainStorage(providerName, options));
+            services => services.AddArgentSeaShardOrleansGrainStorage(providerName, ob => ob.Configure(options)));
 
     public static ISiloBuilder AddArgentSeaShardOrleansGrainStorage(
         this ISiloBuilder builder,
@@ -40,10 +45,11 @@ public static class ArgentSeaSiloBuilderExtensions
     public static IServiceCollection AddArgentSeaShardOrleansGrainStorage(
         this IServiceCollection services,
         string providerName,
-        Action<OrleansShardPersistenceOptions> options)
+        Action<OptionsBuilder<OrleansShardPersistenceOptions>> options)
     {
-        services.AddOptions<OrleansShardPersistenceOptions>(providerName).Configure(options);
-        services.AddKeyedSingleton(providerName, ArgentSeaGrainStorageFactory.CreateShards);
+        options?.Invoke(services.AddOptions<OrleansShardPersistenceOptions>(providerName));
+        services.ConfigureNamedOptionForLogging<OrleansShardPersistenceOptions>(providerName);
+        services.AddGrainStorage(providerName, ArgentSeaGrainStorageFactory.CreateShards);
         return services;
     }
 

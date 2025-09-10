@@ -8,7 +8,7 @@ using Orleans.Runtime.Hosting;
 [assembly: RegisterProvider("ArgentSea", "GrainStorage", "Silo", typeof(ArgentSeaGrainStorageDbProviderBuilder))]
 [assembly: RegisterProvider("ArgentSea", "GrainStorage", "Silo", typeof(ArgentSeaGrainStorageShardProviderBuilder))]
 
-namespace ArgentSea.Orleans;
+namespace Orleans.Hosting;
 
 internal sealed class ArgentSeaGrainStorageDbProviderBuilder : IProviderBuilder<ISiloBuilder>
 {

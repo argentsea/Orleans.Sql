@@ -11,19 +11,19 @@ public static class ArgentSeaGrainStorageFactory
 {
     public static IGrainStorage CreateDb(IServiceProvider services, string name)
     {
-        var optOrleans = services.GetRequiredService<IOptionsMonitor<OrleansDbPersistenceOptions>>();
-        var optCluster = services.GetRequiredService<IOptionsMonitor<ClusterOptions>>();
+        var optOrleans = services.GetRequiredService<IOptions<OrleansDbPersistenceOptions>>();
+        var optCluster = services.GetRequiredService<IOptions<ClusterOptions>>();
         var svcDatabases = services.GetRequiredService<SqlDatabases>();
         var svcLogger = services.GetRequiredService<ILogger<ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>>>();
-        return ActivatorUtilities.CreateInstance<ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>>(services, svcDatabases, optOrleans.Get(name), optCluster.Get(name), svcLogger);
+        return new ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>(svcDatabases, optOrleans, optCluster, svcLogger);
     }
 
     public static IGrainStorage CreateShards(IServiceProvider services, string name)
     {
-        var optOrleans = services.GetRequiredService<IOptionsMonitor<OrleansShardPersistenceOptions>>();
-        var optCluster = services.GetRequiredService<IOptionsMonitor<ClusterOptions>>();
+        var optOrleans = services.GetRequiredService<IOptions<OrleansShardPersistenceOptions>>();
+        var optCluster = services.GetRequiredService<IOptions<ClusterOptions>>();
         var svcShards = services.GetRequiredService<SqlShardSets>();
         var svcLogger = services.GetRequiredService<ILogger<ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>>>();
-        return ActivatorUtilities.CreateInstance<ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>>(services, svcShards, Options.Create(optOrleans.Get(name)), Options.Create(optCluster.Get(name)), svcLogger);
+        return new ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>(svcShards, optOrleans, optCluster, svcLogger);
     }
 }
