@@ -9,7 +9,7 @@ using Orleans.Providers;
 
 namespace ArgentSea.Orleans.Sql;
 
-internal sealed class ArgentSeaClusteringProviderBuilder : IProviderBuilder<ISiloBuilder>, IProviderBuilder<IClientBuilder>
+public sealed class ArgentSeaClusteringProviderBuilder : IProviderBuilder<ISiloBuilder>, IProviderBuilder<IClientBuilder>
 {
     public void Configure(ISiloBuilder builder, string name, IConfigurationSection configurationSection)
     {
