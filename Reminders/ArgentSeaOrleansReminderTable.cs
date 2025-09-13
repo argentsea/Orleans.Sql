@@ -38,7 +38,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         var aGrainId = StringExtensions.Decode(grainId.Key.Value.Span); //decoded ShardKey<Guid, Guid, Guid, Guid> is 69 bytes (encoded is 91 bytes); assumed to be maximum key size.
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainId", aGrainId, 68)
+            .AddSqlVarBinaryInputParameter("GrainId", aGrainId.ToArray(), 68)
             .AddSqlNVarCharInputParameter("@ReminderName", reminderName, 150);
 
         var shardId = grainId.ShardId();
@@ -71,20 +71,19 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
                 return new ReminderEntry() { GrainId = (GrainId)grainIdObj };
             }
         }
-        var origin = rdr.GetChar(1);
         var gType = new GrainType((byte[])rdr[2]);
         var buffer = new byte[68];
         var bytesRead = rdr.GetBytes(0, 0L, buffer, 0, 68);
         var sizedBuffer = new ReadOnlySpan<byte>(buffer).Slice(0, (int)bytesRead).ToArray();
-        var utf8GrainId = StringExtensions.EncodeToUtf8(ref sizedBuffer);
+        var utf8GrainId = StringExtensions.EncodeToUtf8(sizedBuffer);
 
-        if (grainIdObj is GrainId && utf8GrainId != ((GrainId)grainIdObj).Key.Value.ToArray())
-        {
-            throw new TypeLoadException($"Could not load reminder for grainId {((GrainId)grainIdObj).ToString} because the record key from the database, {utf8GrainId.ToString()}, does not match.");
-        }
+        //if (grainIdObj is GrainId && utf8GrainId != ((GrainId)grainIdObj).Key.Value.ToArray())
+        //{
+        //    throw new TypeLoadException($"Could not load reminder for grainId {((GrainId)grainIdObj).ToString} because the record key from the database, {utf8GrainId.ToString()}, does not match.");
+        //}
         return new ReminderEntry()
         {
-            GrainId = new GrainId(gType, new IdSpan(utf8GrainId)),
+            GrainId = new GrainId(gType, new IdSpan(utf8GrainId.ToArray())),
             Period = new TimeSpan(rdr.GetInt64(5)),
             ReminderName = rdr.GetString(3),
             StartAt = rdr.GetDateTime(4),
@@ -96,7 +95,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
     {
         var aGrainId = StringExtensions.Decode(grainId.Key.Value.Span);
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainId", aGrainId, 68);
+            .AddSqlVarBinaryInputParameter("GrainId", aGrainId.ToArray(), 68);
 
         var shardId = grainId.ShardId();
         try
@@ -136,7 +135,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         var aGrainId = StringExtensions.Decode(grainId.Key.Value.Span);
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainId", aGrainId, 68)
+            .AddSqlVarBinaryInputParameter("GrainId", aGrainId.ToArray(), 68)
             .AddSqlNVarCharInputParameter("@ReminderName", reminderName, 150)
             .AddSqlIntInputParameter("@Version", int.Parse(eTag, CultureInfo.InvariantCulture))
             .AddSqlBitOutputParameter("@IsFound");
@@ -165,11 +164,10 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         //var shd = ShardKey<Guid>.FromUtf8(entry.GrainId.Key.AsSpan());
         var aGrainId = StringExtensions.Decode(entry.GrainId.Key.Value.Span);
-        var tuple = entry.GrainId.OriginAndShardId();
+        var shardId = entry.GrainId.ShardId();
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainId", aGrainId, 68)
+            .AddSqlVarBinaryInputParameter("GrainId", aGrainId.ToArray(), 68)
             .AddSqlVarBinaryInputParameter("@GrainType", entry.GrainId.Type.AsSpan().ToArray(), 256)
-            .AddSqlNCharInputParameter("@Origin", tuple.origin.ToString(), 1)
             .AddSqlNVarCharInputParameter("@ReminderName", entry.ReminderName, 150)
             .AddSqlDateTime2InputParameter("@StartTime", entry.StartAt)
             .AddSqlBigIntInputParameter("@Period", entry.Period.Ticks)
@@ -179,7 +177,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         try
         {
-            var intTag = await shardSet[tuple.shardId].Write.ReturnValueAsync<int>(Queries.OrleansReminderUpsertRowKey, "@NewVersion", prms, CancellationToken.None);
+            var intTag = await shardSet[shardId].Write.ReturnValueAsync<int>(Queries.OrleansReminderUpsertRowKey, "@NewVersion", prms, CancellationToken.None);
             return intTag.ToString(CultureInfo.InvariantCulture);
         }
         catch (Exception ex)

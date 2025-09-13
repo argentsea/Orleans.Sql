@@ -53,7 +53,7 @@ public static class Queries
     public static QueryProcedure OrleansReminderDeleteRowKey => new("wtr.OrleansReminderDeleteRowKeyV1", prmsOrleansReminderDeleteRowKey);
 
 
-    private static readonly string[] prmsOrleansReminderUpsertRowKey = ["@GrainId", "@Origin", "@GrainType", "@ReminderName", "@StartTime", "@Period", "@GrainHash", "@OldVersion", "@NewVersion"];
+    private static readonly string[] prmsOrleansReminderUpsertRowKey = ["@GrainId", "@GrainType", "@ReminderName", "@StartTime", "@Period", "@GrainHash", "@OldVersion", "@NewVersion"];
     public static QueryProcedure OrleansReminderUpsertRowKey => new("wtr.OrleansReminderUpsertRowKeyV1", prmsOrleansReminderUpsertRowKey);
 
 
