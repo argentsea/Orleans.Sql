@@ -35,25 +35,28 @@ public static class Queries
 
     #endregion
     #region Orleans Reminders
-    // The parameter arrays are really not necessary, since ReminderEntry is a sealed class and therefore the ArgentSea MapTo parameters can't be invoked. Included for completeness?
-    private static readonly string[] prmsOrleansReminderReadRangeRows = ["@BeginHash", "@EndHash"];
-    public static QueryProcedure OrleansReminderReadRangeRows1Key => new("rdr.OrleansReminderReadRangeRows1KeyV1", prmsOrleansReminderReadRangeRows);
-    public static QueryProcedure OrleansReminderReadRangeRows2Key => new("rdr.OrleansReminderReadRangeRows2KeyV1", prmsOrleansReminderReadRangeRows);
-
-
-    private static readonly string[] prmsOrleansReminderReadRowKey = ["@GrainId", "@ReminderName"];
+    //ArgentSeaOrleansReminderTable.ReadRow
+    private static readonly string[] prmsOrleansReminderReadRowKey = ["@GrainKey", "@GrainType", "@ReminderName"];
     public static QueryProcedure OrleansReminderReadRowKey => new("rdr.OrleansReminderReadRowKeyV1", prmsOrleansReminderReadRowKey);
 
-
-    private static readonly string[] prmsOrleansReminderReadRowsKey = ["@GrainId"];
+    //ArgentSeaOrleansReminderTable.ReadRows
+    private static readonly string[] prmsOrleansReminderReadRowsKey = ["@GrainKey", "@GrainType"];
     public static QueryProcedure OrleansReminderReadRowsKey => new("rdr.OrleansReminderReadRowsKeyV1", prmsOrleansReminderReadRowsKey);
 
 
-    private static readonly string[] prmsOrleansReminderDeleteRowKey = ["@GrainId", "@ReminderName", "@Version", "@IsFound"];
+    //ArgentSeaOrleansReminderTable.ReadRows
+    private static readonly string[] prmsOrleansReminderReadRangeRows = ["@BeginHash", "@EndHash"];
+    public static QueryProcedure OrleansReminderReadRangeRows1Key => new("rdr.OrleansReminderReadRangeRows1KeyV1", prmsOrleansReminderReadRangeRows);
+    //public static QueryProcedure OrleansReminderReadRangeRows2Key => new("rdr.OrleansReminderReadRangeRows2KeyV1", prmsOrleansReminderReadRangeRows);
+
+
+    //ArgentSeaOrleansReminderTable.RemoveRow
+    private static readonly string[] prmsOrleansReminderDeleteRowKey = ["@GrainKey", "@GrainType", "@ReminderName", "@Version", "@IsFound"];
     public static QueryProcedure OrleansReminderDeleteRowKey => new("wtr.OrleansReminderDeleteRowKeyV1", prmsOrleansReminderDeleteRowKey);
 
 
-    private static readonly string[] prmsOrleansReminderUpsertRowKey = ["@GrainId", "@GrainType", "@ReminderName", "@StartTime", "@Period", "@GrainHash", "@OldVersion", "@NewVersion"];
+    //ArgentSeaOrleansReminderTable.UpsertRow
+    private static readonly string[] prmsOrleansReminderUpsertRowKey = ["@GrainKey", "@GrainType", "@ReminderName", "@StartTime", "@Period", "@GrainHash", "@OldVersion", "@NewVersion"];
     public static QueryProcedure OrleansReminderUpsertRowKey => new("wtr.OrleansReminderUpsertRowKeyV1", prmsOrleansReminderUpsertRowKey);
 
 

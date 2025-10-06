@@ -37,17 +37,17 @@ BEGIN;
 	CREATE TABLE dbo.OrleansReminder
 	(
 		ReminderId int NOT NULL IDENTITY(-2147483231, 1),
-		GrainId varbinary(68) NOT NULL,
-		Origin nchar(1) NOT NULL,
+		GrainKey varbinary(1023) NOT NULL, -- corresponds to max GrainKey length in Orleans CosmosDB provider
+		GrainType nvarchar(1023) NOT NULL, -- ADO.net provider’s size of 150 has created issues and forced expansion, so we are using 1023 here to avoid any bugs.
 		ReminderName nvarchar(150) NOT NULL,
 		StartTime datetime2(3) NOT NULL,
 		Period bigint NOT NULL,
-		GrainHash int NOT NULL,
+		GrainHash bigint NOT NULL, -- technically uint would fit on 32-bits, but the range searches fail with type cast type.
 		Version int NOT NULL,
 		CONSTRAINT PK_OrleansReminder PRIMARY KEY (ReminderId),
-		INDEX UIX_OrleansReminder_GrainId_ReminderName UNIQUE (GrainId, ReminderName) INCLUDE (StartTime, Period),
-		INDEX IX_OrleansReminder_GrainHash NONCLUSTERED COLUMNSTORE (GrainHash),
-		CONSTRAINT FK_OrleansReminder_GrainType FOREIGN KEY (Origin) REFERENCES dbo.OrleansGrainType (Origin)
+		INDEX UIX_OrleansReminder_GrainKey_GrainType_ReminderName UNIQUE (GrainKey, GrainType, ReminderName) INCLUDE (StartTime, Period, Version),
+		INDEX UIX_OrleansReminder_GrainKey_GrainType_Version UNIQUE (GrainKey, GrainType, Version) INCLUDE (ReminderName, StartTime, Period),
+		INDEX IX_OrleansReminder_GrainHash NONCLUSTERED COLUMNSTORE (GrainHash)
 	);
 END;
 
@@ -65,96 +65,110 @@ END;
 
 GRANT EXECUTE ON SCHEMA::rdr TO orleansReader;
 GRANT EXECUTE ON SCHEMA::wtr TO orleansWriter;
-
+GO
 
 -- Code
-CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRangeRows1KeyV1 (
-	@BeginHash int,
-	@EndHash int
-) AS
-BEGIN
-SELECT OrleansReminder.GrainId,
-        OrleansReminder.Origin,
-        OrleansGrainType.GrainType,
-		OrleansReminder.ReminderName,
-		OrleansReminder.StartTime,
-		OrleansReminder.Period,
-        OrleansReminder.Version
-	FROM dbo.OrleansReminder
-        INNER JOIN dbo.OrleansGrainType
-        ON OrleansGrainType.Origin = OrleansReminder.Origin
-	WHERE OrleansReminder.GrainHash > @BeginHash
-		AND OrleansReminder.GrainHash <= @EndHash;
-END;
-GO
-
-CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRangeRows2KeyV1 (
-	@BeginHash int,
-	@EndHash int
-) AS
-BEGIN
-SELECT OrleansReminder.GrainId,
-        OrleansReminder.Origin,
-        OrleansGrainType.GrainType,
-		OrleansReminder.ReminderName,
-		OrleansReminder.StartTime,
-		OrleansReminder.Period,
-        OrleansReminder.Version
-	FROM dbo.OrleansReminder
-        INNER JOIN dbo.OrleansGrainType
-        ON OrleansGrainType.Origin = OrleansReminder.Origin
-	WHERE ((OrleansReminder.GrainHash > @BeginHash AND @BeginHash IS NOT NULL)
-		OR (OrleansReminder.GrainHash <= @EndHash AND @EndHash IS NOT NULL));
-END;
-GO
-
 CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRowKeyV1 (
-	@GrainId varbinary(68),
+	@GrainKey varbinary(1023),
+	@GrainType nvarchar(1023),
 	@ReminderName nvarchar(150)
 ) AS
 BEGIN
-SELECT OrleansReminder.GrainId,
-        OrleansReminder.Origin,
-        OrleansGrainType.GrainType,
+SELECT OrleansReminder.GrainKey,
+        OrleansReminder.GrainType,
 		OrleansReminder.ReminderName,
 		OrleansReminder.StartTime,
 		OrleansReminder.Period,
         OrleansReminder.Version
 	FROM dbo.OrleansReminder
-        INNER JOIN dbo.OrleansGrainType
-        ON OrleansGrainType.Origin = OrleansReminder.Origin
-	WHERE OrleansReminder.GrainId = @GrainId
+	WHERE OrleansReminder.GrainKey = @GrainKey
+		AND OrleansReminder.GrainType = @GrainType
 		AND OrleansReminder.ReminderName = @ReminderName;
 END;
 GO
 
 CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRowsKeyV1 (
-	@GrainId varbinary(68)
+	@GrainKey varbinary(1023),
+	@GrainType nvarchar(1023)
 ) AS
 BEGIN
-SELECT OrleansReminder.GrainId,
-        OrleansReminder.Origin,
-        OrleansGrainType.GrainType,
+SELECT OrleansReminder.GrainKey,
+        OrleansReminder.GrainType,
 		OrleansReminder.ReminderName,
 		OrleansReminder.StartTime,
 		OrleansReminder.Period,
         OrleansReminder.Version
 	FROM dbo.OrleansReminder
-        INNER JOIN dbo.OrleansGrainType
-        ON OrleansGrainType.Origin = OrleansReminder.Origin
-	WHERE OrleansReminder.GrainId = @GrainId;
+	WHERE OrleansReminder.GrainKey = @GrainKey
+		AND OrleansReminder.GrainType = @GrainType;
 END;
 GO
 
+
+
+
+CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRangeRows1KeyV1 (
+	@BeginHash bigint,
+	@EndHash bigint
+) AS
+BEGIN
+	IF @BeginHash >= @EndHash
+	BEGIN;
+		SELECT OrleansReminder.GrainKey,
+				OrleansReminder.GrainType,
+				OrleansReminder.ReminderName,
+				OrleansReminder.StartTime,
+				OrleansReminder.Period,
+				OrleansReminder.Version
+			FROM dbo.OrleansReminder
+			WHERE OrleansReminder.GrainHash > @BeginHash --sic, not inclusive
+				OR OrleansReminder.GrainHash <= @EndHash;
+	END;
+	ELSE
+	BEGIN;
+		SELECT OrleansReminder.GrainKey,
+				OrleansReminder.GrainType,
+				OrleansReminder.ReminderName,
+				OrleansReminder.StartTime,
+				OrleansReminder.Period,
+				OrleansReminder.Version
+			FROM dbo.OrleansReminder
+			WHERE OrleansReminder.GrainHash > @BeginHash --sic, not inclusive
+				AND OrleansReminder.GrainHash <= @EndHash;
+	END;
+END;
+GO
+
+--CREATE OR ALTER PROCEDURE rdr.OrleansReminderReadRangeRows2KeyV1 (
+--	@BeginHash bigint,
+--	@EndHash bigint
+--) AS
+--BEGIN
+--SELECT OrleansReminder.GrainKey,
+--        OrleansReminder.GrainType,
+--		OrleansReminder.ReminderName,
+--		OrleansReminder.StartTime,
+--		OrleansReminder.Period,
+--        OrleansReminder.Version
+--	FROM dbo.OrleansReminder
+--	WHERE ((OrleansReminder.GrainHash > @BeginHash AND @BeginHash IS NOT NULL)
+--		OR (OrleansReminder.GrainHash <= @EndHash AND @EndHash IS NOT NULL));
+--END;
+GO
+
+
+
 CREATE OR ALTER PROCEDURE wtr.OrleansReminderDeleteRowKeyV1 (
-	@GrainId varbinary(68),
+	@GrainKey varbinary(1023),
+	@GrainType nvarchar(1023),
 	@ReminderName nvarchar(150),
     @Version int,
 	@IsFound bit OUTPUT
 ) AS
 BEGIN
 	DELETE FROM dbo.OrleansReminder
-	WHERE OrleansReminder.GrainId = @GrainId
+	WHERE OrleansReminder.GrainKey = @GrainKey
+		AND OrleansReminder.GrainType = @GrainType
 		AND OrleansReminder.ReminderName = @ReminderName
         AND OrleansReminder.Version = @Version;
 
@@ -163,9 +177,8 @@ END;
 GO
 
 CREATE OR ALTER PROCEDURE wtr.OrleansReminderUpsertRowKeyV1 (
-	@GrainId varbinary(68),
-    @Origin nchar(1),
-    @GrainType varbinary(128),
+	@GrainKey varbinary(1023),
+	@GrainType nvarchar(1023),
 	@ReminderName nvarchar(150),
 	@StartTime datetime2,
 	@Period bigint, 
@@ -179,7 +192,8 @@ BEGIN
 
     DECLARE @CurrentVersion int = (
         SELECT OrleansReminder.Version
-        FROM dbo.OrleansReminder WHERE GrainId = @GrainId
+        FROM dbo.OrleansReminder WHERE GrainKey = @GrainKey
+		AND GrainType = @GrainType
 		AND ReminderName = @ReminderName);
 
     IF @CurrentVersion <> @OldVersion
@@ -188,26 +202,21 @@ BEGIN
     END;
     SET @NewVersion = @OldVersion + 1;
 
-    IF NOT EXISTS(SELECT 1 FROM dbo.OrleansGrainType WHERE OrleansGrainType.Origin = @Origin)
-    BEGIN
-        INSERT INTO dbo.OrleansGrainType (Origin, GrainType)
-        VALUES(@Origin, @GrainType);
-    END;
-
 	UPDATE dbo.OrleansReminder
 	SET
 		StartTime = @StartTime,
 		Period = @Period,
 		GrainHash = @GrainHash,
 		Version = @NewVersion
-	WHERE GrainId = @GrainId
+	WHERE GrainKey = @GrainKey
+		AND GrainType = @GrainType
 		AND ReminderName = @ReminderName;
 
 
 	INSERT INTO dbo.OrleansReminder
 	(
-		GrainId,
-		Origin,
+		GrainKey,
+		GrainType,
 		ReminderName,
 		StartTime,
 		Period,
@@ -215,8 +224,8 @@ BEGIN
 		Version
 	)
 	SELECT
-		@GrainId,
-		@Origin,
+		@GrainKey,
+		@GrainType,
 		@ReminderName,
 		@StartTime,
 		@Period,

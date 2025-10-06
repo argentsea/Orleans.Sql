@@ -347,15 +347,33 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
         ArgumentNullException.ThrowIfNull(etag, nameof(etag));
         ArgumentNullException.ThrowIfNull(tableVersion, nameof(tableVersion));
 
-        var usualSuspects = new List<SqlDataRecord>();
+        //var usualSuspects = new List<SqlDataRecord>();
+        var usualSuspects = new Dictionary<byte[], SqlDataRecord>();
+        Span<byte> key = stackalloc byte[24]; // IPv6 (16 byte) + int + int = 24 bytes.
+
         foreach (var susp in entry.SuspectTimes ?? [])
         {
+            ReadOnlySpan<byte> addr = susp.Item1.Endpoint.Address.GetAddressBytes();
+            var port = susp.Item1.Endpoint.Port;
+            var gen = susp.Item1.Generation;
+            var pos = key.Append(0, addr);
+            pos = key.Append(pos, port);
+            pos = key.Append(pos, gen);
+            var aKey = key.Slice(pos).ToArray();
+            if (usualSuspects.TryGetValue(aKey, out var dup))
+            {
+                if (dup.GetSqlDateTime(3).Value < susp.Item2) // take the earliest report as the most dispositive
+                {
+                    dup.SetSqlDateTime(3, susp.Item2);
+                }
+                continue;
+            }
             var row = new SqlDataRecord(SuspectTableColumns);
-            row.SetValue(0, susp.Item1.Endpoint.Address.GetAddressBytes());
-            row.SetInt32(1, susp.Item1.Endpoint.Port);
-            row.SetInt32(2, susp.Item1.Generation);
+            row.SetValue(0, addr.ToArray());
+            row.SetInt32(1, port);
+            row.SetInt32(2, gen);
             row.SetSqlDateTime(3, susp.Item2);
-            usualSuspects.Add(row);
+            usualSuspects.Add(aKey, row);
         }
 
         var prms = new ParameterCollection()
@@ -366,7 +384,7 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
             .AddSqlVarBinaryInputParameter("Address", entry.SiloAddress.Endpoint.Address.GetAddressBytes(), 16)
             .AddSqlIntInputParameter("@Port", entry.SiloAddress.Endpoint.Port)
             .AddSqlIntInputParameter("@Generation", entry.SiloAddress.Generation)
-            .AddSqlTableValuedParameter("@SuspectTimes", usualSuspects.Count > 0 ? usualSuspects : null)
+            .AddSqlTableValuedParameter("@SuspectTimes", usualSuspects.Count > 0 ? usualSuspects.Values : null)
             .AddSqlIntInputParameter("@ETagNo", int.Parse(tableVersion.VersionEtag, CultureInfo.InvariantCulture))
             .AddSqlIntInputParameter("@Version", tableVersion.Version);
 
