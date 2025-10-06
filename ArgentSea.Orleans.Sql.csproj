@@ -7,6 +7,10 @@
     <Version>2.0.0-prerelease-7</Version>
     <Title>ArgentSea Microsoft Orleans persistence for SQL Server</Title>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+	<Copyright>© John Hicks</Copyright>
+    <Description>Extension to enable ArgentSea to serve as a data provider for Microsoft Orleans, using standard SQL Server tables and stored procedures.</Description>
+	<PackageIcon>argentsea-logo.png</PackageIcon>
+	<PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
 	<PropertyGroup>
@@ -18,7 +22,8 @@
     <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="4.0.0-preview2" />
     <PackageReference Include="Microsoft.Orleans.Reminders" Version="9.1.2" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="9.1.2" />
-  </ItemGroup>
+	<None Include="argentsea-logo.png" Pack="true" PackagePath="\" />
+	</ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\ArgentSea.Orleans\src\ArgentSea.Orleans.csproj" />
