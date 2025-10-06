@@ -1,14 +1,10 @@
-﻿using System.Collections.Concurrent;
-using System.Data.Common;
-using System.Diagnostics;
-using System.Globalization;
-using System.Text;
-using ArgentSea;
-using ArgentSea.Sql;
+﻿using ArgentSea.Sql;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using Orleans;
-using Orleans.Runtime;
+using System.Collections.Concurrent;
+using System.Data.Common;
+using System.Globalization;
+using System.Text;
 
 namespace ArgentSea.Orleans.Sql;
 
@@ -39,8 +35,8 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
         ArgumentNullException.ThrowIfNull(reminderName, nameof(reminderName));
 
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainId", grainId.Key.Value.ToArray(), 1023)
-            .AddSqlNVarCharInputParameter("GrainType", grainId.Type.ToString(), 1023)
+            .AddSqlVarBinaryInputParameter("@GrainKey", grainId.Key.Value.ToArray(), 1023)
+            .AddSqlNVarCharInputParameter("@GrainType", grainId.Type.ToString(), 1023)
             .AddSqlNVarCharInputParameter("@ReminderName", reminderName, 150);
 
         var shardId = grainId.ShardId();
@@ -97,10 +93,16 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             throw new ArgumentNullException(nameof(bagEntries));
         }
 
-        if (!rdr.HasRows || rdr.IsClosed || rdr.IsDBNull(0))
+        if (!rdr.HasRows || rdr.IsClosed)
         {
             return null;
         }
+
+        if (!rdr.Read() || rdr.IsDBNull(0))
+        {
+            return null;
+        }
+
         var gType = new GrainType(UTF8Encoding.UTF8.GetBytes((string)rdr[1]));
         var buffer = new byte[1023];
         var bytesRead = rdr.GetBytes(0, 0L, buffer, 0, 1023);
@@ -121,8 +123,8 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
     public async Task<ReminderTableData> ReadRows(GrainId grainId)
     {
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainKey", grainId.Key.Value.ToArray(), 1023)
-            .AddSqlNVarCharInputParameter("GrainType", grainId.Type.ToString(), 1023);
+            .AddSqlVarBinaryInputParameter("@GrainKey", grainId.Key.Value.ToArray(), 1023)
+            .AddSqlNVarCharInputParameter("@GrainType", grainId.Type.ToString(), 1023);
 
         var shardId = grainId.ShardId();
         try
@@ -164,8 +166,8 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         var aGrainId = StringExtensions.Decode(grainId.Key.Value.Span);
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainKey", grainId.Key.Value.ToArray(), 1023)
-            .AddSqlNVarCharInputParameter("GrainType", grainId.Type.ToString(), 1023)
+            .AddSqlVarBinaryInputParameter("@GrainKey", grainId.Key.Value.ToArray(), 1023)
+            .AddSqlNVarCharInputParameter("@GrainType", grainId.Type.ToString(), 1023)
             .AddSqlNVarCharInputParameter("@ReminderName", reminderName, 150)
             .AddSqlIntInputParameter("@Version", int.Parse(eTag, CultureInfo.InvariantCulture))
             .AddSqlBitOutputParameter("@IsFound");
@@ -193,16 +195,18 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
         ArgumentNullException.ThrowIfNull(entry, nameof(entry));
 
         //var shd = ShardKey<Guid>.FromUtf8(entry.GrainId.Key.AsSpan());
+        int? etag = entry.ETag is not null ? int.Parse(entry.ETag, CultureInfo.InvariantCulture) : null;
+
         var aGrainId = StringExtensions.Decode(entry.GrainId.Key.Value.Span);
         var shardId = entry.GrainId.ShardId();
         var prms = new ParameterCollection()
-            .AddSqlVarBinaryInputParameter("GrainKey", entry.GrainId.Key.Value.ToArray(), 1023)
-            .AddSqlNVarCharInputParameter("GrainType", entry.GrainId.Type.ToString(), 1023)
+            .AddSqlVarBinaryInputParameter("@GrainKey", entry.GrainId.Key.Value.ToArray(), 1023)
+            .AddSqlNVarCharInputParameter("@GrainType", entry.GrainId.Type.ToString(), 1023)
             .AddSqlNVarCharInputParameter("@ReminderName", entry.ReminderName, 150)
             .AddSqlDateTime2InputParameter("@StartTime", entry.StartAt)
             .AddSqlBigIntInputParameter("@Period", entry.Period.Ticks)
             .AddSqlBigIntInputParameter("@GrainHash", (long)entry.GrainId.GetUniformHashCode())
-            .AddSqlIntInputParameter("@OldVersion", int.Parse(entry.ETag, CultureInfo.InvariantCulture))
+            .AddSqlIntInputParameter("@OldVersion", etag)
             .AddSqlIntOutputParameter("@NewVersion");
 
         try
