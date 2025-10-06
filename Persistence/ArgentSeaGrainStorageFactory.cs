@@ -24,6 +24,6 @@ public static class ArgentSeaGrainStorageFactory
         var optCluster = services.GetRequiredService<IOptions<ClusterOptions>>();
         var svcShards = services.GetRequiredService<SqlShardSets>();
         var svcLogger = services.GetRequiredService<ILogger<ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>>>();
-        return new ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>(svcShards, optOrleans, optCluster, svcLogger);
+        return new ArgentSeaShardGrainPersistence<SqlShardConnectionOptions>(svcShards, optOrleans.Value, optCluster.Value, svcLogger);
     }
 }
