@@ -16,24 +16,24 @@ namespace ArgentSea.Orleans.Sql;
 /// </summary>
 public class ArgentSeaOrleansMembershipTable : IMembershipTable
 {
-    private readonly SqlDatabases.Database db;
-    private readonly string clusterId;
-    private readonly ILogger<ArgentSeaOrleansMembershipTable> logger;
-    private readonly string dbKey;
-    private static TableVersion unIinitTableVersion = new(0, "0");
+    private readonly SqlDatabases.Database _db;
+    private readonly string _clusterId;
+    private readonly ILogger<ArgentSeaOrleansMembershipTable> _logger;
+    private readonly string _dbKey;
+    private static TableVersion _unIinitTableVersion = new(0, "0");
 
     public ArgentSeaOrleansMembershipTable(SqlDatabases dbs, IOptions<ClusterOptions> clusterOptions, IOptions<OrleansDbPersistenceOptions> dbOptions, ILogger<ArgentSeaOrleansMembershipTable> logger)
     {
         ArgumentNullException.ThrowIfNull(dbs, nameof(dbs));
-        this.dbKey = dbOptions.Value.DatabaseKey;
-        var db = dbs[this.dbKey];
+        _dbKey = dbOptions.Value.DatabaseKey;
+        var db = dbs[_dbKey];
         if (db is null)
         {
-            throw new KeyNotFoundException($"Database connection “{this.dbKey}” was not found in the databases collection.");
+            throw new KeyNotFoundException($"Database connection “{_dbKey}” was not found in the databases collection.");
         }
-        this.db = db;
-        clusterId = clusterOptions.Value.ClusterId;
-        this.logger = logger;
+        _db = db;
+        _clusterId = clusterOptions.Value.ClusterId;
+        _logger = logger;
     }
 
     /// <summary>
@@ -48,10 +48,10 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
         if (tryInitTableVersion)
         {
             var prms = new ParameterCollection()
-                .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+                .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
                 .AddSqlIntInputParameter("@ETagNo", 0)
                 .AddSqlIntInputParameter("@Version", 0);
-            return db.Write.RunAsync(Queries.OrleansClusterInsertMemberVersionKey, prms, CancellationToken.None);
+            return _db.Write.RunAsync(Queries.OrleansClusterInsertMemberVersionKey, prms, CancellationToken.None);
         }
         return Task.CompletedTask;
     }
@@ -62,15 +62,15 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
     public Task CleanupDefunctSiloEntries(DateTimeOffset beforeDate)
     {
         var prms = new ParameterCollection()
-            .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+            .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
             .AddSqlDateTime2InputParameter("BeforeDate", beforeDate.UtcDateTime);
         try
         {
-            return db.Write.RunAsync(Queries.OrleansClusterDeleteDefunctMembers, prms, CancellationToken.None);
+            return _db.Write.RunAsync(Queries.OrleansClusterDeleteDefunctMembers, prms, CancellationToken.None);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error cleaning up defunct silo entries.");
+            _logger.LogError(ex, "Error cleaning up defunct silo entries.");
             throw;
         }
     }
@@ -86,11 +86,11 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
             .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150);
         try
         {
-            return db.Write.RunAsync(Queries.OrleansClusterDelete, prms, CancellationToken.None);
+            return _db.Write.RunAsync(Queries.OrleansClusterDelete, prms, CancellationToken.None);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error deleting membership table entries for clusterId:{ClusterId}", clusterId);
+            _logger.LogError(ex, "Error deleting membership table entries for clusterId:{ClusterId}", clusterId);
             throw;
         }
     }
@@ -117,7 +117,7 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
 
 
         var prms = new ParameterCollection()
-            .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+            .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
             .AddSqlVarBinaryInputParameter("Address", entry.SiloAddress.Endpoint.Address.GetAddressBytes(), 16)
             .AddSqlIntInputParameter("@Port", entry.SiloAddress.Endpoint.Port)
             .AddSqlIntInputParameter("@Generation", entry.SiloAddress.Generation)
@@ -131,11 +131,11 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
             .AddSqlIntInputParameter("@Version", tableVersion.Version);
         try
         {
-            await db.Write.RunAsync(Queries.OrleansClusterInsertMemberKey, prms, CancellationToken.None);
+            await _db.Write.RunAsync(Queries.OrleansClusterInsertMemberKey, prms, CancellationToken.None);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error inserting row for host:{Host} on Port:{Port}", entry.HostName, entry.SiloAddress.Endpoint.Port);
+            _logger.LogError(ex, "Error inserting row for host:{Host} on Port:{Port}", entry.HostName, entry.SiloAddress.Endpoint.Port);
             throw;
         }
         return true;
@@ -154,12 +154,12 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
         // This would be SO much easier with ArgentSea...
         try
         {
-            using var cnn = new SqlConnection(db.Read.ConnectionString);
+            using var cnn = new SqlConnection(_db.Read.ConnectionString);
             using var cmd = new SqlCommand(Queries.OrleansClusterMemberReadAllKey.Sql, cnn);
             var list = new List<Tuple<MembershipEntry, string>>();
-            var tv = unIinitTableVersion;
+            var tv = _unIinitTableVersion;
             cmd.CommandType = CommandType.StoredProcedure;
-            cmd.Parameters.AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150);
+            cmd.Parameters.AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150);
             await cnn.OpenAsync();
             using (var rdr = await cmd.ExecuteReaderAsync())
             {
@@ -171,7 +171,7 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
                 tv = new TableVersion(rdr.GetInt32(2), versionETagNo.ToString(CultureInfo.InvariantCulture));
                 if (!rdr.NextResult())
                 {
-                    logger.LogError("Member table query did not result expected Members result.");
+                    _logger.LogError("Member table query did not result expected Members result.");
                     return new MembershipTableData(tv);
                 }
 
@@ -194,25 +194,25 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
                     memberVersion = rdr.GetInt32(11);
                     if (memberETagNo != versionETagNo)
                     {
-                        logger.LogError($"Member ETag {memberETagNo} does not match VersionTable ETag {versionETagNo}.");
+                        _logger.LogError($"Member ETag {memberETagNo} does not match VersionTable ETag {versionETagNo}.");
                     }
                     if (memberVersion > tv.Version)
                     {
-                        logger.LogError($"Member Version {memberVersion} is greater than VersionTable version number {tv.Version}. This may indicate data corruption.");
+                        _logger.LogError($"Member Version {memberVersion} is greater than VersionTable version number {tv.Version}. This may indicate data corruption.");
                     }
                     members.Add(rdr.GetInt32(0), me);
                     list.Add(new Tuple<MembershipEntry, string>(me, memberETagNo.ToString(CultureInfo.InvariantCulture)));
                 }
                 if (!rdr.NextResult())
                 {
-                    logger.LogError("Member table query did not result expected Suspects result.");
+                    _logger.LogError("Member table query did not result expected Suspects result.");
                     return new MembershipTableData(list, tv);
                 }
                 while (rdr.Read())
                 {
                     if (!members.TryGetValue(rdr.GetInt32(0), out var member))
                     {
-                        logger.LogError($"Member Suspect record (id: {rdr.GetInt32(0)}) refers to a member record which doesn't exist (members collection count:{members.Count}).");
+                        _logger.LogError($"Member Suspect record (id: {rdr.GetInt32(0)}) refers to a member record which doesn't exist (members collection count:{members.Count}).");
                     }
                     else
                     {
@@ -225,7 +225,7 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error reading all membership entries.");
+            _logger.LogError(ex, "Error reading all membership entries.");
             throw;
         }
     }
@@ -242,17 +242,17 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
     {
         ArgumentNullException.ThrowIfNull(key, nameof(key));
 
-        using var cnn = new SqlConnection(db.Read.ConnectionString);
+        using var cnn = new SqlConnection(_db.Read.ConnectionString);
         using var cmd = new SqlCommand(Queries.OrleansClusterMemberReadRowKey.Sql, cnn);
         cmd.CommandType = CommandType.StoredProcedure;
-        cmd.Parameters.AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
-            .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+        cmd.Parameters.AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
+            .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
             .AddSqlVarBinaryInputParameter("@Address", key.Endpoint.Address.GetAddressBytes(), 16)
             .AddSqlIntInputParameter("@Port", key.Endpoint.Port)
             .AddSqlIntInputParameter("@Generation", key.Generation);
 
         var list = new List<Tuple<MembershipEntry, string>>();
-        var tv = unIinitTableVersion;
+        var tv = _unIinitTableVersion;
         await cnn.OpenAsync();
         using (var rdr = await cmd.ExecuteReaderAsync())
         {
@@ -277,17 +277,17 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
             var memberVersion = rdr.GetInt32(7);
             if (memberETagNo != versionETagNo)
             {
-                logger.LogError($"Member ETag {memberETagNo} does not match VersionTable ETag {versionETagNo}.");
+                _logger.LogError($"Member ETag {memberETagNo} does not match VersionTable ETag {versionETagNo}.");
             }
             if (memberVersion > tv.Version)
             {
-                logger.LogError($"Member Version {memberVersion} is greater than VersionTable version number {tv.Version}. This may indicate data corruption.");
+                _logger.LogError($"Member Version {memberVersion} is greater than VersionTable version number {tv.Version}. This may indicate data corruption.");
             }
             list.Add(new Tuple<MembershipEntry, string>(me, memberETagNo.ToString(CultureInfo.InvariantCulture)));
 
             if (!rdr.NextResult())
             {
-                logger.LogError("Member table query did not result expected Suspects result.");
+                _logger.LogError("Member table query did not result expected Suspects result.");
                 return new MembershipTableData(list, tv);
             }
             while (rdr.Read())
@@ -304,17 +304,17 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
 
         var prms = new ParameterCollection()
             .AddSqlDateTime2InputParameter("@IAmAliveTime", entry.IAmAliveTime)
-            .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+            .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
             .AddSqlVarBinaryInputParameter("@Address", entry.SiloAddress.Endpoint.Address.GetAddressBytes(), 16)
             .AddSqlIntInputParameter("@Port", entry.SiloAddress.Endpoint.Port)
             .AddSqlIntInputParameter("@Generation", entry.SiloAddress.Generation);
         try
         {
-            return db.Write.RunAsync(Queries.OrleansClusterUpdateIAmAliveTimeKey, prms, CancellationToken.None);
+            return _db.Write.RunAsync(Queries.OrleansClusterUpdateIAmAliveTimeKey, prms, CancellationToken.None);
         }
         catch
         {
-            logger.LogError("Error updating IAmAliveTime for entry: {Entry}", entry);
+            _logger.LogError("Error updating IAmAliveTime for entry: {Entry}", entry);
             throw;
         }
     }
@@ -377,7 +377,7 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
         }
 
         var prms = new ParameterCollection()
-            .AddSqlNVarCharInputParameter("@ClusterId", clusterId, 150)
+            .AddSqlNVarCharInputParameter("@ClusterId", _clusterId, 150)
             .AddSqlSmallIntInputParameter("@Status", (short)entry.Status)
             .AddSqlIntInputParameter("@ProxyPort", entry.ProxyPort)
             .AddSqlDateTime2InputParameter("@IAmAliveTime", entry.IAmAliveTime)
@@ -390,12 +390,12 @@ public class ArgentSeaOrleansMembershipTable : IMembershipTable
 
         try
         {
-            await db.Write.RunAsync(Queries.OrleansClusterUpdateMemberKey, prms, CancellationToken.None);
+            await _db.Write.RunAsync(Queries.OrleansClusterUpdateMemberKey, prms, CancellationToken.None);
             return true;
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Error updating row for entry: {Entry}", entry);
+            _logger.LogError(ex, "Error updating row for entry: {Entry}", entry);
             return false;
         }
     }

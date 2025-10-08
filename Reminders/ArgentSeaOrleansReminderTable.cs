@@ -99,8 +99,14 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
 
         if (!rdr.HasRows || rdr.IsClosed || rdr.IsDBNull(0))
         {
-            return null;
+            return null!;
         }
+
+        if (!rdr.Read() || rdr.IsDBNull(1))
+        {
+            return null!;
+        }
+
         var gType = new GrainType(UTF8Encoding.UTF8.GetBytes((string)rdr[1]));
         var buffer = new byte[1023];
         var bytesRead = rdr.GetBytes(0, 0L, buffer, 0, 1023);
@@ -114,7 +120,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             Period = new TimeSpan(rdr.GetInt64(4)),
             ETag = rdr.GetInt32(5).ToString(CultureInfo.InvariantCulture),
         });
-        return null;
+        return null!;
     }
 
 

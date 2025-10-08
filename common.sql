@@ -316,7 +316,7 @@ BEGIN;
 END;
 GO
 
-CREATE OR ALTER PROCEDURE [wtr].[OrleansClusterInsertMemberKeyV1] (
+CREATE OR ALTER PROCEDURE wtr.OrleansClusterInsertMemberKeyV1 (
 	@ClusterId nvarchar(150) NOT NULL,
 	@Address varbinary(16) NOT NULL,
 	@Port int NOT NULL,
