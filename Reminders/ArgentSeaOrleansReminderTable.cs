@@ -67,7 +67,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             return null;
         }
 
-        if (!rdr.HasRows || rdr.IsClosed || rdr.IsDBNull(0))
+        if (!rdr.HasRows || rdr.IsClosed || !rdr.Read() || rdr.IsDBNull(0))
         {
             if (grainIdObj is GrainId gid)
             {
@@ -97,7 +97,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             throw new ArgumentNullException(nameof(bagEntries));
         }
 
-        if (!rdr.HasRows || rdr.IsClosed || rdr.IsDBNull(0))
+        if (!rdr.HasRows || rdr.IsClosed || !rdr.Read() || rdr.IsDBNull(0))
         {
             return null!;
         }
