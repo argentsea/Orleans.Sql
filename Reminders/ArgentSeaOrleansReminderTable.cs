@@ -93,8 +93,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             throw new ArgumentNullException(nameof(bagEntries));
         }
 
-<<<<<<< HEAD
-        if (!rdr.HasRows || rdr.IsClosed || !rdr.Read() || rdr.IsDBNull(0))
+        if (!rdr.HasRows || rdr.IsClosed)
         {
             return null!;
         }
@@ -104,18 +103,6 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             return null!;
         }
 
-=======
-        if (!rdr.HasRows || rdr.IsClosed)
-        {
-            return null;
-        }
-
-        if (!rdr.Read() || rdr.IsDBNull(0))
-        {
-            return null;
-        }
-
->>>>>>> origin/main
         var gType = new GrainType(UTF8Encoding.UTF8.GetBytes((string)rdr[1]));
         var buffer = new byte[1023];
         var bytesRead = rdr.GetBytes(0, 0L, buffer, 0, 1023);
@@ -129,11 +116,7 @@ public class ArgentSeaOrleansReminderTable : IReminderTable
             Period = new TimeSpan(rdr.GetInt64(4)),
             ETag = rdr.GetInt32(5).ToString(CultureInfo.InvariantCulture),
         });
-<<<<<<< HEAD
         return null!;
-=======
-        return null;
->>>>>>> origin/main
     }
 
 
