@@ -11,13 +11,13 @@ namespace ArgentSea.Orleans.Sql;
 
 public sealed class ArgentSeaClusteringProviderBuilder : IProviderBuilder<ISiloBuilder>, IProviderBuilder<IClientBuilder>
 {
-    public void Configure(ISiloBuilder builder, string name, IConfigurationSection configurationSection)
+    public void Configure(ISiloBuilder builder, string? name, IConfigurationSection configurationSection)
     {
         builder.Configure<ClusterOptions>(configurationSection);
         builder.UseArgentSeaClustering(_ => { });
     }
 
-    public void Configure(IClientBuilder builder, string name, IConfigurationSection configurationSection)
+    public void Configure(IClientBuilder builder, string? name, IConfigurationSection configurationSection)
     {
         builder.Configure<ClusterOptions>(configurationSection);
         builder.UseArgentSeaClustering(_ => { });

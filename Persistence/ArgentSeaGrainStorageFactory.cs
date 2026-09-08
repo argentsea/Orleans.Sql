@@ -11,11 +11,11 @@ public static class ArgentSeaGrainStorageFactory
 {
     public static IGrainStorage CreateDb(IServiceProvider services, string name)
     {
-        var optOrleans = services.GetRequiredService<IOptions<OrleansDbPersistenceOptions>>();
+        var optOrleans = services.GetOptionsByName<OrleansDbPersistenceOptions>(name);
         var optCluster = services.GetRequiredService<IOptions<ClusterOptions>>();
         var svcDatabases = services.GetRequiredService<SqlDatabases>();
         var svcLogger = services.GetRequiredService<ILogger<ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>>>();
-        return new ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>(svcDatabases, optOrleans, optCluster, svcLogger);
+        return new ArgentSeaDbGrainPersistence<SqlDbConnectionOptions>(svcDatabases, Options.Create(optOrleans), optCluster, svcLogger);
     }
 
     public static IGrainStorage CreateShards(IServiceProvider services, string providerName)
