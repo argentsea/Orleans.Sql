@@ -12,7 +12,7 @@ namespace Orleans.Hosting;
 
 internal sealed class ArgentSeaGrainStorageDbProviderBuilder : IProviderBuilder<ISiloBuilder>
 {
-    public void Configure(ISiloBuilder builder, string dataProviderName, IConfigurationSection configurationSection) => builder.ConfigureServices(services =>
+    public void Configure(ISiloBuilder builder, string? dataProviderName, IConfigurationSection configurationSection) => builder.ConfigureServices(services =>
     {
         var section = builder.Configuration.GetRequiredSection("OrleansData");
         builder.Services.Configure<OrleansDbPersistenceOptions>(dataProviderName, opts =>
@@ -26,7 +26,7 @@ internal sealed class ArgentSeaGrainStorageDbProviderBuilder : IProviderBuilder<
 
 internal sealed class ArgentSeaGrainStorageShardProviderBuilder : IProviderBuilder<ISiloBuilder>
 {
-    public void Configure(ISiloBuilder builder, string dataProviderName, IConfigurationSection configurationSection) => builder.ConfigureServices(services =>
+    public void Configure(ISiloBuilder builder, string? dataProviderName, IConfigurationSection configurationSection) => builder.ConfigureServices(services =>
     {
         var section = builder.Configuration.GetRequiredSection("OrleansData");
         builder.Services.Configure<OrleansShardPersistenceOptions>(dataProviderName, opts =>
